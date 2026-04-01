@@ -29,7 +29,7 @@ FEATURE_ORDER = [
 ]
 
 @app.route('/')
-def index():
+def homepage():
     return render_template('index.html', stats=stats)
 
 @app.route('/predict', methods=['POST'])
