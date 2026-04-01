@@ -70,6 +70,12 @@ def predict():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/')
+def index():
+    return render_template('index.html', stats=stats)
+
+# ... your /predict route ...
+
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5050))
-    app.run(host='0.0.0.0', port=port)
+    PORT = int(os.environ.get('PORT', 5050))
+    app.run(host='0.0.0.0', port=PORT, debug=True)
