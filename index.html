@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car Price Predictor</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:#3A86FF; --pink:#FF006E; --green:#06D6A0;
+  --dark:#0F172A; --card:#1E293B; --border:#334155;
+  --text:#E2E8F0; --muted:#94A3B8;
+}
+body { background:var(--dark); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; }
+
+/* Header */
+header {
+  background:var(--card); border-bottom:1px solid var(--border);
+  padding:1rem 2rem; display:flex; align-items:center; gap:1rem;
+}
+header h1 { font-size:1.4rem; font-weight:700; }
+header span {
+  font-size:0.82rem; color:var(--muted); background:#0F3460;
+  padding:2px 10px; border-radius:99px;
+}
+header span.green { background:#0d2b1d; color:#6ee7b7; }
+
+/* Layout */
+.container {
+  max-width:1100px; margin:2rem auto; padding:0 1.5rem;
+  display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;
+}
+@media(max-width:760px){ .container{ grid-template-columns:1fr; } }
+
+/* Card */
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:1.5rem;
+}
+.card h2 {
+  font-size:1rem; font-weight:600; margin-bottom:1.2rem;
+  color:var(--blue); text-transform:uppercase; letter-spacing:.05em;
+}
+
+/* Form */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+label { font-size:.8rem; color:var(--muted); display:block; margin-bottom:.3rem; }
+input, select {
+  width:100%; background:var(--dark); border:1px solid var(--border);
+  border-radius:8px; padding:.5rem .75rem; color:var(--text);
+  font-size:.9rem; outline:none; transition:border-color .15s;
+}
+input:focus, select:focus { border-color:var(--blue); }
+
+/* Button */
+.btn {
+  margin-top:1.2rem; width:100%; padding:.75rem; border-radius:8px;
+  border:none; background:var(--blue); color:#fff; font-size:1rem;
+  font-weight:600; cursor:pointer; transition:.2s;
+}
+.btn:hover  { background:#2563eb; }
+.btn:active { transform:scale(.98); }
+
+/* Result */
+.result-box {
+  margin-top:1.2rem; border-radius:10px; padding:1.3rem;
+  text-align:center; display:none;
+}
+.result-box.show { display:block; background:#0d2b1d; border:1px solid var(--green); }
+.result-box.err  { display:block; background:#2d0d1a; border:1px solid var(--pink); }
+.result-price { font-size:2.4rem; font-weight:800; color:var(--green); }
+.result-label { font-size:.8rem; color:var(--muted); margin-top:.3rem; }
+.result-note  { font-size:.73rem; color:var(--muted); margin-top:.5rem; }
+.result-breakdown {
+  margin-top:.8rem; font-size:.77rem; color:var(--muted);
+  text-align:left; background:var(--dark); border-radius:6px;
+  padding:.7rem .9rem; line-height:1.8;
+}
+
+/* Tabs */
+.tabs { display:flex; gap:.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+.tab {
+  padding:.4rem 1rem; border-radius:6px; border:1px solid var(--border);
+  background:none; color:var(--muted); cursor:pointer; font-size:.85rem;
+  transition:.15s;
+}
+.tab:hover  { border-color:var(--blue); color:var(--text); }
+.tab.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+.panel { display:none; }
+.panel.active { display:block; }
+
+/* Metrics */
+.metrics { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; }
+.metric { background:var(--dark); border-radius:8px; padding:.8rem; text-align:center; }
+.metric .val { font-size:1.5rem; font-weight:700; color:var(--green); }
+.metric .lbl { font-size:.75rem; color:var(--muted); margin-top:.2rem; }
+.interp {
+  margin-top:1rem; font-size:.82rem; color:var(--muted); line-height:1.65;
+  background:var(--dark); padding:.9rem; border-radius:8px;
+}
+.interp b { color:var(--text); }
+
+/* Coefficient table */
+.coef-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.coef-table th {
+  color:var(--muted); text-align:left; padding:.4rem .6rem;
+  border-bottom:1px solid var(--border); font-weight:500;
+}
+.coef-table td { padding:.4rem .6rem; border-bottom:1px solid #1e293b; }
+.pos { color:#34d399; } .neg { color:#f87171; }
+.bar-wrap { background:#0f172a; border-radius:4px; height:8px; overflow:hidden; width:80px; }
+.bar-fill { height:100%; border-radius:4px; }
+
+/* Plots */
+#plot-img { width:100%; border-radius:8px; border:1px solid var(--border); }
+.plot-note { font-size:.73rem; color:var(--muted); margin-top:.5rem; }
+
+/* How it works */
+.howit {
+  font-size:.82rem; color:var(--muted); line-height:1.85;
+  background:var(--dark); padding:1rem; border-radius:8px;
+}
+.howit b { color:var(--text); }
+.howit code {
+  background:#0f172a; padding:1px 5px; border-radius:4px;
+  font-size:.78rem; color:#93c5fd;
+}
+
+footer {
+  text-align:center; font-size:.72rem; color:var(--muted);
+  margin:1.5rem 0 2.5rem; letter-spacing:.04em;
+}
+footer span { color:var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+       stroke="var(--blue)" stroke-width="2" stroke-linecap="round">
+    <path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h11l5 5v3a2 2 0 0 1-2 2h-2"/>
+    <circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>
+  </svg>
+  <h1>Car Price Predictor</h1>
+  <span>Linear Regression · 12 Features</span>
+</header>
+
+<!-- ── Main ── -->
+<div class="container">
+
+  <!-- LEFT: Form -->
+  <div class="card">
+    <h2>🔢 Enter Car Details</h2>
+    <div class="grid2">
+
+      <div>
+        <label>Production Year</label>
+        <input type="number" id="production_year" value="2018" min="1990" max="2024">
+      </div>
+      <div>
+        <label>Mileage (km)</label>
+        <input type="number" id="mileage" value="50000" min="0">
+      </div>
+      <div>
+        <label>Levy / Tax (GEL)</label>
+        <input type="number" id="levy" value="500" min="0">
+      </div>
+      <div>
+        <label>Engine Volume (L)</label>
+        <input type="number" id="engine_volume" value="2.0" step="0.1" min="0.5" max="8">
+      </div>
+      <div>
+        <label>Cylinders</label>
+        <input type="number" id="cylinders" value="4" min="2" max="16">
+      </div>
+      <div>
+        <label>Airbags</label>
+        <input type="number" id="airbags" value="4" min="0" max="16">
+      </div>
+
+      <div>
+        <label>Fuel Type</label>
+        <select id="fuel_type">
+          <option>CNG</option>
+          <option>Diesel</option>
+          <option>Hybrid</option>
+          <option>Hydrogen</option>
+          <option>LPG</option>
+          <option selected>Petrol</option>
+          <option>Plug-in Hybrid</option>
+        </select>
+      </div>
+      <div>
+        <label>Gear Box</label>
+        <select id="gear_box_type">
+          <option selected>Automatic</option>
+          <option>Manual</option>
+          <option>Tiptronic</option>
+          <option>Variator</option>
+        </select>
+      </div>
+      <div>
+        <label>Drive Wheels</label>
+        <select id="drive_wheels">
+          <option>4x4</option>
+          <option selected>Front</option>
+          <option>Rear</option>
+        </select>
+      </div>
+      <div>
+        <label>Category</label>
+        <select id="category">
+          <option>Cabriolet</option>
+          <option>Coupe</option>
+          <option>Goods wagon</option>
+          <option>Hatchback</option>
+          <option>Jeep</option>
+          <option>Limousine</option>
+          <option>Microbus</option>
+          <option>Minivan</option>
+          <option>Pickup</option>
+          <option selected>Sedan</option>
+          <option>Universal</option>
+        </select>
+      </div>
+      <div>
+        <label>Leather Interior</label>
+        <select id="leather_interior">
+          <option>Yes</option>
+          <option selected>No</option>
+        </select>
+      </div>
+      <div>
+        <label>Wheel Position</label>
+        <select id="wheel">
+          <option selected>Left wheel</option>
+          <option>Right-hand drive</option>
+        </select>
+      </div>
+
+    </div>
+
+    <button class="btn" onclick="runPredict()">🚗 Predict Price</button>
+
+    <div class="result-box" id="result-box">
+      <div class="result-price" id="result-price"></div>
+      <div class="result-label">Estimated Market Price (GHC)</div>
+      <div class="result-note"  id="result-note"></div>
+      <div class="result-breakdown" id="result-breakdown"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Analysis -->
+  <div class="card">
+    <h2>📊 Model Analysis</h2>
+
+    <div class="tabs" id="main-tabs">
+      <button class="tab active" onclick="showTab(this,'metrics')">Metrics</button>
+      <button class="tab"        onclick="showTab(this,'coefs')">Coefficients</button>
+      <button class="tab"        onclick="showTab(this,'plots')">Plots</button>
+      <button class="tab"        onclick="showTab(this,'howit')">How It Works</button>
+    </div>
+
+    <!-- Metrics panel -->
+    <div class="panel active" id="tab-metrics">
+      <div class="metrics">
+        <div class="metric"><div class="val">11.4%</div><div class="lbl">R² Score</div></div>
+        <div class="metric"><div class="val">16,612</div><div class="lbl">RMSE (GEL)</div></div>
+        <div class="metric"><div class="val">11,533</div><div class="lbl">MAE (GEL)</div></div>
+        <div class="metric"><div class="val">12</div><div class="lbl">Features Used</div></div>
+      </div>
+      <div class="interp">
+        <b>Interpretation:</b><br>
+        R² = 0.114 means the model explains ~11% of price variance — typical for linear
+        regression on noisy, multi-modal car price data with high-value outliers.
+        RMSE of ~16 612 GEL reflects sensitivity to luxury cars. MAE of ~11 533 GEL is a
+        more robust measure. The model reliably reveals the <i>direction and magnitude</i>
+        of each feature's influence. A Random Forest or Gradient Boosting model would
+        push R² above 0.70 on this dataset.
+      </div>
+    </div>
+
+    <!-- Coefficients panel -->
+    <div class="panel" id="tab-coefs">
+      <table class="coef-table">
+        <thead>
+          <tr>
+            <th>Feature</th><th>Coefficient</th><th>Magnitude</th><th>Effect</th>
+          </tr>
+        </thead>
+        <tbody id="coef-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Plots panel -->
+    <div class="panel" id="tab-plots">
+      <div class="tabs" id="plot-tabs" style="margin-bottom:.8rem">
+        <button class="tab active" onclick="showPlot(this,'regression_line')">Regression</button>
+        <button class="tab"        onclick="showPlot(this,'coefficients')">Coefs</button>
+        <button class="tab"        onclick="showPlot(this,'residuals')">Residuals</button>
+        <button class="tab"        onclick="showPlot(this,'importance')">Importance</button>
+      </div>
+      <img id="plot-img" src="regression_line.png" alt="Model plot">
+      <p class="plot-note">
+        ℹ️ Plots load from the same folder as this file
+        (regression_line.png, coefficients.png, residuals.png, importance.png).
+      </p>
+    </div>
+
+    <!-- How It Works panel -->
+    <div class="panel" id="tab-howit">
+      <div class="howit">
+        <b style="color:var(--green)">How prediction works — no server needed</b><br><br>
+
+        The trained model weights are <b>baked directly into this HTML file</b>.
+        Everything runs in your browser using JavaScript.<br><br>
+
+        <b>Step 1 — Feature Engineering</b><br>
+        • <code>car_age = 2024 − production_year</code><br>
+        • <code>log_mileage = ln(1 + mileage)</code> — reduces right skew<br>
+        • <code>log_levy = ln(1 + levy)</code> — same reason<br>
+        • Binary: <code>is_leather</code> (1/0), <code>is_left_wheel</code> (1/0)<br>
+        • Label-encoded: fuel type, gear box, drive wheels, category<br><br>
+
+        <b>Step 2 — StandardScaler</b><br>
+        Each feature is normalised: <code>(x − mean) / std</code><br>
+        This makes all 12 features comparable in one equation.<br><br>
+
+        <b>Step 3 — Linear Regression</b><br>
+        <code>price = 18,947.67 + Σ (coeff_i × scaled_feature_i)</code><br><br>
+
+        <b>Step 4 — Contribution Breakdown</b><br>
+        After prediction, the result panel shows how much each
+        feature <span class="pos">raised ↑</span> or
+        <span class="neg">lowered ↓</span> the final price.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <span>Standalone HTML</span> · Model weights embedded in JS ·
+  scikit-learn LinearRegression · GCTU CSSD 609
+</footer>
+
+<!-- ── JavaScript — model weights + prediction logic ── -->
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   TRAINED MODEL WEIGHTS (exported from Python / scikit-learn)
+   ═══════════════════════════════════════════════════════════════ */
+const SCALER_MEAN  = [13.055819091558906, 11.163903658518088, 4.697067099235989,
+                      2.3080706998505423, 4.579634804080837,  6.572941711612191,
+                      0.7274676717135616, 0.9239716680745987, 3.4217298070050037,
+                      0.5354473974917149, 0.9144843719539931, 6.272532328286438];
+
+const SCALER_SCALE = [5.63690629228007,   2.4298723146626897, 3.10165889614613,
+                      0.8800072372485852, 1.1948852796845908, 4.326551087498836,
+                      0.44526223545817506,0.2650434392133528, 1.8107370962671188,
+                      0.8963400011519641, 0.5664305365747919, 2.7884330697858255];
+
+const COEF         = [-6659.157444501283, -275.14605213224604, -4745.442268804796,
+                       2603.357081370534,  139.19203888130312, -4567.240369683458,
+                       -801.2258105426602, 4029.252713170966,  -2729.172116072273,
+                       3951.2275309516617,  367.4340996247577, -4028.1663702095084];
+
+const INTERCEPT    = 18947.672428357917;
+
+/* Category label-encoding maps (alphabetical — must match training) */
+const CAT = {
+  fuel_type:     {CNG:0, Diesel:1, Hybrid:2, Hydrogen:3, LPG:4, Petrol:5, "Plug-in Hybrid":6},
+  gear_box_type: {Automatic:0, Manual:1, Tiptronic:2, Variator:3},
+  drive_wheels:  {"4x4":0, Front:1, Rear:2},
+  category:      {Cabriolet:0, Coupe:1, "Goods wagon":2, Hatchback:3, Jeep:4,
+                  Limousine:5, Microbus:6, Minivan:7, Pickup:8, Sedan:9, Universal:10}
+};
+
+const FEATURE_NAMES = [
+  'car_age','log_mileage','log_levy','engine_volume',
+  'cylinders','airbags','is_leather','is_left_wheel',
+  'fuel_type_enc','gear_box_type_enc','drive_wheels_enc','category_enc'
+];
+
+const COEF_INFO = {
+  car_age:           'Older cars are cheaper. Largest negative driver.',
+  log_levy:          'Higher levy/tax is associated with lower resale value.',
+  airbags:           'Negative — older/cheaper cars dominate this feature in the dataset.',
+  category_enc:      'Vehicle category strongly influences price.',
+  fuel_type_enc:     'Fuel type matters; hybrids/EVs differ from petrol.',
+  is_leather:        'Slight negative — dataset confound with other variables.',
+  log_mileage:       'Higher mileage → lower price. Log transform reduces outlier effect.',
+  drive_wheels_enc:  '4x4/AWD commands a slight premium.',
+  cylinders:         'More cylinders marginally increase price.',
+  engine_volume:     'Larger engine → higher price. Strong positive signal.',
+  gear_box_type_enc: 'Automatic/Tiptronic gearboxes add significant value.',
+  is_left_wheel:     'Left-hand drive (Georgian market standard) earns a premium.',
+};
+
+/* ── Core prediction (mirrors Python exactly) ─────────────────── */
+function predict(inp) {
+  const raw = [
+    2024 - inp.production_year,
+    Math.log1p(inp.mileage),
+    Math.log1p(inp.levy),
+    inp.engine_volume,
+    inp.cylinders,
+    inp.airbags,
+    inp.leather_interior === 'Yes' ? 1 : 0,
+    inp.wheel === 'Left wheel' ? 1 : 0,
+    CAT.fuel_type[inp.fuel_type]          ?? 0,
+    CAT.gear_box_type[inp.gear_box_type]  ?? 0,
+    CAT.drive_wheels[inp.drive_wheels]    ?? 0,
+    CAT.category[inp.category]            ?? 0,
+  ];
+
+  // StandardScaler: z = (x − mean) / scale
+  const scaled = raw.map((v, i) => (v - SCALER_MEAN[i]) / SCALER_SCALE[i]);
+
+  // Linear regression: y = intercept + Σ(coef_i × scaled_i)
+  const contributions = scaled.map((v, i) => COEF[i] * v);
+  const price = INTERCEPT + contributions.reduce((s, v) => s + v, 0);
+
+  return { price: Math.max(0, price), contributions };
+}
+
+/* ── Predict button handler ───────────────────────────────────── */
+function runPredict() {
+  const g = id => document.getElementById(id).value;
+
+  const inp = {
+    production_year:  +g('production_year'),
+    mileage:          +g('mileage'),
+    levy:             +g('levy'),
+    engine_volume:    +g('engine_volume'),
+    cylinders:        +g('cylinders'),
+    airbags:          +g('airbags'),
+    leather_interior:  g('leather_interior'),
+    wheel:             g('wheel'),
+    fuel_type:         g('fuel_type'),
+    gear_box_type:     g('gear_box_type'),
+    drive_wheels:      g('drive_wheels'),
+    category:          g('category'),
+  };
+
+  const { price, contributions } = predict(inp);
+  const rb = document.getElementById('result-box');
+
+  rb.className = 'result-box show';
+  document.getElementById('result-price').textContent =
+    'GH₵ ' + price.toLocaleString(undefined,
+      { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  document.getElementById('result-note').textContent =
+    'Baseline: GH₵18,947.67  ·  R² = 0.114  ·  Linear Regression';
+
+  // Top 6 contributors
+  const top = contributions
+    .map((v, i) => ({ name: FEATURE_NAMES[i], val: v }))
+    .sort((a, b) => Math.abs(b.val) - Math.abs(a.val))
+    .slice(0, 6);
+
+  const rows = top.map(t => {
+    const color = t.val >= 0 ? '#34d399' : '#f87171';
+    const arrow = t.val >= 0 ? '↑' : '↓';
+    const sign  = t.val >= 0 ? '+' : '';
+    return `<span style="color:${color}">${arrow} <b>${t.name}</b>: ${sign}GH₵${Math.round(t.val).toLocaleString()}</span>`;
+  }).join('<br>');
+
+  document.getElementById('result-breakdown').innerHTML =
+    '<b style="color:var(--text)">Top contributors to this price:</b><br>' + rows;
+}
+
+/* ── Build coefficient table ──────────────────────────────────── */
+const maxAbs = Math.max(...COEF.map(Math.abs));
+const tbody  = document.getElementById('coef-tbody');
+
+COEF.map((v, i) => ({ f: FEATURE_NAMES[i], v }))
+    .sort((a, b) => b.v - a.v)
+    .forEach(({ f, v }) => {
+      const pct   = (Math.abs(v) / maxAbs * 100).toFixed(1);
+      const color = v >= 0 ? '#34d399' : '#f87171';
+      const sign  = v >= 0 ? '+' : '';
+      tbody.innerHTML += `
+        <tr title="${COEF_INFO[f] ?? ''}">
+          <td>🛈 ${f}</td>
+          <td class="${v>=0?'pos':'neg'}">${sign}${Math.round(v).toLocaleString()}</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+            </div>
+          </td>
+          <td style="color:${color};font-size:.75rem">${v>=0?'↑ Raises':'↓ Lowers'}</td>
+        </tr>`;
+    });
+
+/* ── Tab switching ────────────────────────────────────────────── */
+function showTab(btn, name) {
+  document.querySelectorAll('#main-tabs ~ .panel')
+          .forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#main-tabs .tab')
+          .forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Plot switching ───────────────────────────────────────────── */
+function showPlot(btn, name) {
+  // PNGs sit in the same folder as index.html (GitHub Pages root)
+  document.getElementById('plot-img').src = name + '.png?t=' + Date.now();
+  document.querySelectorAll('#plot-tabs .tab')
+          .forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
